@@ -1,0 +1,322 @@
+from types import NoneType
+
+from discord import message
+import msender
+from youtubesearchpython import VideosSearch, Video, ResultMode
+import yt_dlp as youtube_dl
+import os
+import discord
+import asyncio
+import re
+
+# technical stuff
+
+
+async def init():
+    global pos, q, current, total_songs, state, volume, link_queue
+    q = []
+    link_queue = []
+    pos = 0
+    total_songs = 0
+    current = -1
+    volume = 1.0
+    state = 0  # 0 stopped, 1 playing, 2 pause
+
+
+async def play_file(vc, file):
+    global state, volume
+    if vc.is_playing():
+        vc.stop()
+
+    vc.play(discord.FFmpegPCMAudio(file))
+    # ,after=lambda e: print('done', e))
+    vc.source = discord.PCMVolumeTransformer(vc.source, volume=volume)
+    state = 1
+    print(file[6:-4])
+
+
+async def join(bot, message):
+    for i in bot.voice_clients:
+        if i.guild == message.guild:
+            if bot.user in message.author.voice.channel.members:
+                return i
+            else:
+                await i.move_to(message.author.voice.channel)
+                return i
+    if type(message.author.voice) == NoneType:
+        await msender.send('Вы не в голосовом канале', message.channel)
+        return ''
+    else:
+        vc = await message.author.voice.channel.connect()
+        print('joined')
+        return vc
+
+
+async def download(video_url, filename):
+
+    options = {
+        'format': 'bestaudio/best',
+        'keepvideo': False,
+        'outtmpl': filename,
+    }
+
+    with youtube_dl.YoutubeDL(options) as ydl:
+        ydl.download([video_url])
+
+    return filename
+
+
+async def youtube_search(prompt: str):
+    videosSearch = VideosSearch(prompt, limit=2)
+    vid = dict(videosSearch.result())["result"][0]['id']
+    return f'https://www.youtube.com/watch?v={vid}'
+
+
+async def get_title(link):
+    vid = Video.get(link, mode=ResultMode.json)
+    title = vid['title']
+    title = 'queue/' + re.sub(r'[\|/,:&$]', '', title) + '.mp3'
+
+    return title
+
+
+# controls
+
+
+async def play(bot, link, message, play_top=False):
+    global vc, state, total_songs, q, link_queue
+
+    if state == 2:
+        await pause(message)
+    if not link == '':
+
+        vc = await join(bot, message)
+        if vc == '':
+            return 1
+
+        file = ''
+
+        if link.startswith("https://"):
+            file = await get_title(link)
+
+        else:
+            link = await youtube_search(link)
+            file = await get_title(link)
+
+        if not os.path.exists(file):
+            await download(link, file)
+
+        if not play_top and len(q) > 0:
+            q.append(file)
+            link_queue.append(link)
+        else:
+            q.insert(pos + 1, file)
+            link_queue.insert(pos + 1, link)
+
+        total_songs += 1
+        await msender.send(f"{q.index(file) + 1}. {file[6:-4]}", message.channel)
+
+        return 0
+
+
+async def pause(message):
+    global state, vc
+    if state == 0:
+        await msender.send("Так ниче не играет 😳", message.channel)
+    elif state == 1:
+        state = 2
+        vc.pause()
+        await msender.send("Пауза так пауза", message.channel)
+    elif state == 2:
+        state = 1
+        vc.resume()
+        await msender.send("Включаем", message.channel)
+
+
+async def stop(bot, message):
+    for i in bot.voice_clients:
+        if i.guild == message.guild:
+            await i.disconnect()
+            await msender.send('Ладно, давай', message.channel)
+            break
+    await init()
+
+
+async def volume_(vol, message, bot):
+    global volume
+    if vol == '':
+        await msender.send(f"Текущая громкость: {volume}", message.channel)
+    else:
+        volume = float(vol) * 0.01
+        vc.source.volume = volume
+        await msender.send(f"Громкость {int(vc.source.volume * 100)}", message.channel)
+
+
+# playlists
+
+
+async def list_playlist(name, message, bot):
+    path = 'playlists'
+    filepath = f'playlists/{name}.txt'
+
+    if name == '':
+        files = '\n'.join([f[:-4]
+                          for f in os.listdir(path) if f.endswith('.txt')])
+        await msender.send_long(str(files), message.channel, title='Плейлисты:\n\n')
+    else:
+        if not os.path.exists(filepath):
+            await msender.send('Такого плейлиста нет', message.channel)
+        else:
+            with open(filepath, 'r', encoding='utf-8') as file:
+                songs = file.read()
+                await msender.send_long(str(songs), message.channel, title=f'Плейлист {name}:')
+
+
+async def save_playlist(name, message):
+    with open(f'playlists/{name}.txt', 'w', encoding="utf-8") as file:
+        file.write("\n".join([i[6:-4] for i in q]))
+
+    with open(f'playlists/{name}.links', 'w', encoding="utf-8") as file:
+        file.write("\n".join([i for i in link_queue]))
+
+    await msender.send(f"Плейлист '{name}' сохранен", message.channel)
+
+
+async def play_playlist(name, message, bot):
+    txt = f'playlists/{name}.txt'
+    links = f'playlists/{name}.links'
+
+    if os.path.isfile(links):
+        with open(links, 'r', encoding="utf-8") as file:
+            asd = file.read().split('\n')
+            for i in asd:
+                s = await play(bot, i, message)
+                if s == 1:
+                    return
+        await msender.send(f"Загрузка плейлиста '{name}' завершена", message.channel)
+
+    elif os.path.isfile(txt):
+        with open(txt, 'r', encoding="utf-8") as file:
+            asd = file.readlines()
+            for i in asd:
+                s = await play(bot, i, message)
+                if s == 1:
+                    return
+        await msender.send(f"Загрузка плейлиста '{name}' завершена", message.channel)
+        await msender.send(f"ОСТОРОЖНО! Плейлист сохранен в старом формате.", message.channel)
+
+    else:
+        await msender.send('Нет такого плейлиста', message.channel)
+
+
+async def del_playlist(name, message):
+    path = f'playlists/{name}'
+    deleted = 0
+    if os.path.isfile(path + '.txt'):
+        os.remove(path + '.txt')
+        deleted += 1
+    if os.path.isfile(path + '.links'):
+        os.remove(path + '.links')
+        deleted += 1
+
+    if deleted == 2:
+        await msender.send(f'Удалил плейлист {name}', message.channel)
+    elif deleted == 1:
+        await msender.send(f'Удалил плейлист {name} (Старый формат)', message.channel)
+    elif deleted == 0:
+        await msender.send(f'Такого плейлиста я не нашел(', message.channel)
+    else:
+        await msender.send(f'че блять? ты как сюда попал? вове сообщи это баг', message.channel)
+
+
+# queue stuff
+
+
+async def remove(song_id, message):
+    global pos, current, total_songs, q, link_queue
+    song_id = int(song_id) - 1
+
+    if song_id >= 0 and song_id <= len(q):
+        if song_id <= pos:
+            if song_id == pos:
+                await skip()
+            total_songs -= 1
+            pos -= 1
+            current -= 1
+
+        await msender.send(f"Удаляем {q[song_id][6:-4]}", message.channel)
+        q.pop(song_id)
+        link_queue.pop(song_id)
+        if total_songs == 0:
+            if vc.is_playing():
+                vc.stop()
+            await init()
+
+    else:
+        await msender.send("Такой песни нету", message.channel)
+
+
+async def queue():
+    global q, pos, current, state
+    while True:
+        if not q == [] and not state == 2:
+            if not vc.is_playing() and state == 1:
+                if len(q) == 1:
+                    await play_file(q[current])
+                else:
+                    await skip()
+
+            if not current == pos:
+                current = pos
+
+                await play_file(vc, q[current])
+        await asyncio.sleep(1)
+
+
+async def print_queue(message):
+    if q == []:
+        await msender.send("Очередь пустая а шо", message.channel)
+    else:
+        emb = discord.Embed(
+            title=f'Сейчас играет: \n{pos + 1}. {q[pos][6:-4]}')
+        emb.color = discord.Color.from_rgb(255, 166, 201)
+        emb.add_field(name='Очередь:', value="\n".join(
+            [f'{i+1}. ' + q[i][6:-4] for i in range(len(q))]))
+        await message.channel.send(embed=emb)
+
+
+async def skip(num='', message=''):
+    global pos, total_songs
+    if num == '':
+        pos += 1
+        if pos > total_songs - 1:
+            pos = 0
+    else:
+        num = int(num)
+        if num <= total_songs and num > 0:
+            pos = num - 1
+            await msender.send(f'Включаю трек {q[num - 1][6:-4]}', message.channel)
+        else:
+            await msender.send('Такой цифры в очереди нету', message.channel)
+
+
+async def back(message):
+    if pos == 0:
+        await skip(num=total_songs, message=message)
+    else:
+        await skip(num=pos, message=message)
+
+
+async def next(message):
+    await skip(num=(pos + 2) % total_songs, message=message)
+
+
+async def clear_queue(message):
+    await init()
+    try:
+        if vc.is_playing():
+            vc.stop()
+    except Exception as e:
+        print(e)
+    finally:
+        await msender.send('Очистил очередь', message.channel)
