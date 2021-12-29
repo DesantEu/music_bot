@@ -262,7 +262,7 @@ async def queue():
         if not q == [] and not state == 2:
             if not vc.is_playing() and state == 1:
                 if len(q) == 1:
-                    await play_file(q[current])
+                    await play_file(vc, q[current])
                 else:
                     await skip()
 
