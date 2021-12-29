@@ -79,6 +79,7 @@ async def parse_admin(bot, message):
         await msender.send(f'Можно ломаться: {bot.debug}', message.channel)
 
     elif args[0] == 'shutdown':
+        await msender.send('Смэрть', chan)
         exit()
 
     elif args[0] in ['dpl', 'delpl', 'rmpl']:
