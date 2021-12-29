@@ -53,7 +53,8 @@ class User(discord.Client):
                 await msender.send('Не сейчас', message.channel, discord.Color.default())
                 return
             # dj check
-            if not 'DJ' in [i.name for i in message.author.roles] and self.dj_check:
+            if (not self.dj_role in [i.name for i in message.author.roles] and self.dj_check
+                and not self.admin_role in [i.name for i in message.author.roles]):
                 await msender.send('С тобой дружить я не буду', message.channel, discord.Color.default())
                 return
             # to break or not to break
