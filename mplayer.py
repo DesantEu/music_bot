@@ -8,14 +8,25 @@ import os
 import discord
 import asyncio
 import re
+from datetime import datetime
+from mutagen.mp3 import MP3
+import subprocess
+
+# TODO move tech stuff to bottom
+# TODO make a better print whe nplaying song
+# TODO repeat tpggle
+
 
 # technical stuff
 
 
 async def init():
-    global pos, q, current, total_songs, state, volume, link_queue
+    global pos, q, current, total_songs, state, volume, link_queue, song_start_time, pause_time, song_len
     q = []
     link_queue = []
+    song_start_time = datetime.now()
+    pause_time = datetime.now()
+    song_len = 0
     pos = 0
     total_songs = 0
     current = -1
@@ -24,15 +35,60 @@ async def init():
 
 
 async def play_file(vc, file):
-    global state, volume
+    global state, song_start_time, song_len
     if vc.is_playing():
         vc.stop()
+
+    song_len = await get_song_length(file)
 
     vc.play(discord.FFmpegPCMAudio(file))
     # ,after=lambda e: print('done', e))
     vc.source = discord.PCMVolumeTransformer(vc.source, volume=volume)
+    song_start_time = datetime.now()
+
     state = 1
     print(file[6:-4])
+
+
+async def get_song_length(file):
+    args = ("ffprobe", "-show_entries", "format=duration", "-i", file)
+    popen = subprocess.Popen(args, stdout=subprocess.PIPE)
+    popen.wait()
+    song_len = str(popen.stdout.read())[23:-18]
+    song_len = int(float(song_len))
+    print('SONG LEN:' + str(song_len))
+
+    return song_len
+
+
+async def get_time_played():
+    st = datetime.now() - song_start_time
+    st = st.total_seconds()
+    if state == 2:
+        st = st - pause_time
+    return st
+
+
+async def get_time_str():
+    played = await get_time_played()
+    hrs = int(song_len / 60 / 60)
+    mins = int(song_len / 60 - hrs * 60)
+    sec = int(song_len % 60)
+
+    hrsp = int(played / 60 / 60)
+    minsp = int(played / 60 - hrsp * 60)
+    secp = int(played % 60)
+
+    if hrs > 0:
+        stime = f'{hrs}:{mins:02}:{sec:02}'
+    else:
+        stime = f'{mins}:{sec:02}'
+    if hrsp > 0:
+        ptime = f'{hrsp}:{minsp:02}:{secp:02}'
+    else:
+        ptime = f'{minsp}:{secp:02}'
+
+    return f'{ptime} / {stime}'
 
 
 async def join(bot, message):
@@ -120,15 +176,25 @@ async def play(bot, link, message, play_top=False):
 
 
 async def pause(message):
-    global state, vc
+    global state, vc, pause_time, song_start_time
+
     if state == 0:
         await msender.send("Так ниче не играет 😳", message.channel)
+
     elif state == 1:
         state = 2
         vc.pause()
+
+        pause_time = datetime.now()
+
         await msender.send("Пауза так пауза", message.channel)
+
     elif state == 2:
         state = 1
+
+        delta = datetime.now() - pause_time
+        song_start_time = song_start_time + delta
+
         vc.resume()
         await msender.send("Включаем", message.channel)
 
@@ -277,8 +343,10 @@ async def print_queue(message):
     if q == []:
         await msender.send("Очередь пустая а шо", message.channel)
     else:
+        song_name = f'{pos + 1}. {q[pos][6:-4]}'
+
         emb = discord.Embed(
-            title=f'Сейчас играет: \n{pos + 1}. {q[pos][6:-4]}')
+            title=f'Сейчас играет: \n {song_name} ({await get_time_str()})')
         emb.color = discord.Color.from_rgb(255, 166, 201)
         emb.add_field(name='Очередь:', value="\n".join(
             [f'{i+1}. ' + q[i][6:-4] for i in range(len(q))]))
