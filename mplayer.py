@@ -12,128 +12,8 @@ from datetime import datetime
 from mutagen.mp3 import MP3
 import subprocess
 
-# TODO move tech stuff to bottom
 # TODO make a better print whe nplaying song
 # TODO repeat tpggle
-
-
-# technical stuff
-
-
-async def init():
-    global pos, q, current, total_songs, state, volume, link_queue, song_start_time, pause_time, song_len
-    q = []
-    link_queue = []
-    song_start_time = datetime.now()
-    pause_time = datetime.now()
-    song_len = 0
-    pos = 0
-    total_songs = 0
-    current = -1
-    volume = 1.0
-    state = 0  # 0 stopped, 1 playing, 2 pause
-
-
-async def play_file(vc, file):
-    global state, song_start_time, song_len
-    if vc.is_playing():
-        vc.stop()
-
-    song_len = await get_song_length(file)
-
-    vc.play(discord.FFmpegPCMAudio(file))
-    # ,after=lambda e: print('done', e))
-    vc.source = discord.PCMVolumeTransformer(vc.source, volume=volume)
-    song_start_time = datetime.now()
-
-    state = 1
-    print(file[6:-4])
-
-
-async def get_song_length(file):
-    args = ("ffprobe", "-show_entries", "format=duration", "-i", file)
-    popen = subprocess.Popen(args, stdout=subprocess.PIPE)
-    popen.wait()
-    song_len = str(popen.stdout.read())[23:-18]
-    song_len = int(float(song_len))
-    print('SONG LEN:' + str(song_len))
-
-    return song_len
-
-
-async def get_time_played():
-    st = datetime.now() - song_start_time
-    st = st.total_seconds()
-    if state == 2:
-        st = st - pause_time
-    return st
-
-
-async def get_time_str():
-    played = await get_time_played()
-    hrs = int(song_len / 60 / 60)
-    mins = int(song_len / 60 - hrs * 60)
-    sec = int(song_len % 60)
-
-    hrsp = int(played / 60 / 60)
-    minsp = int(played / 60 - hrsp * 60)
-    secp = int(played % 60)
-
-    if hrs > 0:
-        stime = f'{hrs}:{mins:02}:{sec:02}'
-    else:
-        stime = f'{mins}:{sec:02}'
-    if hrsp > 0:
-        ptime = f'{hrsp}:{minsp:02}:{secp:02}'
-    else:
-        ptime = f'{minsp}:{secp:02}'
-
-    return f'{ptime} / {stime}'
-
-
-async def join(bot, message):
-    for i in bot.voice_clients:
-        if i.guild == message.guild:
-            if bot.user in message.author.voice.channel.members:
-                return i
-            else:
-                await i.move_to(message.author.voice.channel)
-                return i
-    if type(message.author.voice) == NoneType:
-        await msender.send('Вы не в голосовом канале', message.channel)
-        return ''
-    else:
-        vc = await message.author.voice.channel.connect()
-        print('joined')
-        return vc
-
-
-async def download(video_url, filename):
-
-    options = {
-        'format': 'bestaudio/best',
-        'keepvideo': False,
-        'outtmpl': filename,
-    }
-
-    with youtube_dl.YoutubeDL(options) as ydl:
-        ydl.download([video_url])
-
-    return filename
-
-
-async def youtube_search(prompt: str):
-    videosSearch = VideosSearch(prompt, limit=2)
-    vid = dict(videosSearch.result())["result"][0]['id']
-    return f'https://www.youtube.com/watch?v={vid}'
-
-
-async def get_title(link):
-    vid = Video.get(link, mode=ResultMode.json)
-    title = vid['title']
-    title = 'queue/' + re.sub(r'[\|/,:&$]', '', title) + '.mp3'
-
-    return title
 
 
 # controls
@@ -388,3 +268,122 @@ async def clear_queue(message):
         print(e)
     finally:
         await msender.send('Очистил очередь', message.channel)
+
+
+# technical stuff
+
+
+async def init():
+    global pos, q, current, total_songs, state, volume, link_queue, song_start_time, pause_time, song_len
+    q = []
+    link_queue = []
+    song_start_time = datetime.now()
+    pause_time = datetime.now()
+    song_len = 0
+    pos = 0
+    total_songs = 0
+    current = -1
+    volume = 1.0
+    state = 0  # 0 stopped, 1 playing, 2 pause
+
+
+async def play_file(vc, file):
+    global state, song_start_time, song_len
+    if vc.is_playing():
+        vc.stop()
+
+    song_len = await get_song_length(file)
+
+    vc.play(discord.FFmpegPCMAudio(file))
+    # ,after=lambda e: print('done', e))
+    vc.source = discord.PCMVolumeTransformer(vc.source, volume=volume)
+    song_start_time = datetime.now()
+
+    state = 1
+    print(file[6:-4])
+
+
+async def get_song_length(file):
+    args = ("ffprobe", "-show_entries", "format=duration", "-i", file)
+    popen = subprocess.Popen(args, stdout=subprocess.PIPE)
+    popen.wait()
+    song_len = str(popen.stdout.read())[23:-18]
+    song_len = int(float(song_len))
+    print('SONG LEN:' + str(song_len))
+
+    return song_len
+
+
+async def get_time_played():
+    st = datetime.now() - song_start_time
+    st = st.total_seconds()
+    if state == 2:
+        st = st - pause_time
+    return st
+
+
+async def get_time_str():
+    played = await get_time_played()
+    hrs = int(song_len / 60 / 60)
+    mins = int(song_len / 60 - hrs * 60)
+    sec = int(song_len % 60)
+
+    hrsp = int(played / 60 / 60)
+    minsp = int(played / 60 - hrsp * 60)
+    secp = int(played % 60)
+
+    if hrs > 0:
+        stime = f'{hrs}:{mins:02}:{sec:02}'
+    else:
+        stime = f'{mins}:{sec:02}'
+    if hrsp > 0:
+        ptime = f'{hrsp}:{minsp:02}:{secp:02}'
+    else:
+        ptime = f'{minsp}:{secp:02}'
+
+    return f'{ptime} / {stime}'
+
+
+async def join(bot, message):
+    for i in bot.voice_clients:
+        if i.guild == message.guild:
+            if bot.user in message.author.voice.channel.members:
+                return i
+            else:
+                await i.move_to(message.author.voice.channel)
+                return i
+    if type(message.author.voice) == NoneType:
+        await msender.send('Вы не в голосовом канале', message.channel)
+        return ''
+    else:
+        vc = await message.author.voice.channel.connect()
+        print('joined')
+        return vc
+
+
+async def download(video_url, filename):
+
+    options = {
+        'format': 'bestaudio/best',
+        'keepvideo': False,
+        'outtmpl': filename,
+    }
+
+    with youtube_dl.YoutubeDL(options) as ydl:
+        ydl.download([video_url])
+
+    return filename
+
+
+async def youtube_search(prompt: str):
+    videosSearch = VideosSearch(prompt, limit=2)
+    vid = dict(videosSearch.result())["result"][0]['id']
+    return f'https://www.youtube.com/watch?v={vid}'
+
+
+async def get_title(link):
+    vid = Video.get(link, mode=ResultMode.json)
+    title = vid['title']
+    title = 'queue/' + re.sub(r'[\|/,:&$]', '', title) + '.mp3'
+
+    return title
