@@ -14,6 +14,7 @@ import subprocess
 
 # TODO make a better print whe nplaying song
 # TODO repeat tpggle
+# TODO add now playing
 
 
 # controls
@@ -300,7 +301,7 @@ async def play_file(vc, file):
     song_start_time = datetime.now()
 
     state = 1
-    print(file[6:-4])
+    print(f'started playing "{file[6:-4]}"')
 
 
 async def get_song_length(file):
