@@ -12,7 +12,6 @@ from datetime import datetime
 from mutagen.mp3 import MP3
 import subprocess
 
-# TODO make a better print whe nplaying song
 # TODO repeat tpggle
 # TODO add now playing
 
@@ -385,6 +384,6 @@ async def youtube_search(prompt: str):
 async def get_title(link):
     vid = Video.get(link, mode=ResultMode.json)
     title = vid['title']
-    title = 'queue/' + re.sub(r'[\|/,:&$]', '', title) + '.mp3'
+    title = 'queue/' + re.sub(r'[\|/,:&$"]', '', title) + '.mp3'
 
     return title
