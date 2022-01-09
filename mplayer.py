@@ -204,18 +204,18 @@ async def remove(song_id, message):
 
 async def queue():
     global q, pos, current, state
-    while True:
-        if not q == [] and not state == 2:
-            if not vc.is_playing() and state == 1:
-                if len(q) == 1:
-                    await play_file(vc, q[current])
-                else:
-                    await skip()
 
-            if not current == pos:
-                current = pos
-
+    if not q == [] and not state == 2:
+        if not vc.is_playing() and state == 1:
+            if len(q) == 1:
                 await play_file(vc, q[current])
+            else:
+                await skip()
+
+        if not current == pos:
+            current = pos
+
+            await play_file(vc, q[current])
         await asyncio.sleep(1)
 
 
@@ -285,6 +285,10 @@ async def init():
     current = -1
     volume = 1.0
     state = 0  # 0 stopped, 1 playing, 2 pause
+
+async def process():
+    while True:
+        await queue()
 
 
 async def play_file(vc, file):
