@@ -29,7 +29,7 @@ class User(discord.Client):
 
         # player init and main loop
         await mplayer.init()
-        task = asyncio.Task(mplayer.process())
+        task = asyncio.Task(mplayer.queue())
 
         print('BOT STARTED')
     
