@@ -2,6 +2,7 @@ import discord
 import subprocess
 import os
 import msender
+import atexit
 
 
 class User(discord.Client):
@@ -60,6 +61,11 @@ async def kill(message=''):
     if not message == '':
         await msender.send('Убил бота)(', message.channel, white_color)
 
+def exit_override():
+    with open('pids.txt', 'w+') as file:
+        file.write('')
+
+atexit.register(exit_override)
 
 white_color = discord.Color.from_rgb(255,255,255)
 user = User()
