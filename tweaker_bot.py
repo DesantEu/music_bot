@@ -10,6 +10,7 @@ class User(discord.Client):
         self.admin_prefix = ">"
         self.admin_role = 'thwew-admin'
 
+        await kill()
         await start()
 
         print('tweaker started')
@@ -36,14 +37,28 @@ class User(discord.Client):
 async def start(message=''):
     # os.system(r'python -u "d:\projects\music_bot\main.py"')
     global proc
+
     start_command = r'python -u main.py'
     proc = subprocess.Popen(start_command.split(' '))
+
+    with open('pids.txt', 'w+') as file:
+        file.write(file.read() + str(proc.pid) + ' ')
+
     if not message == '':
         await msender.send('Поднял бота', message.channel, white_color)
 
-async def kill(message):
-    proc.kill()
-    await msender.send('Убил бота)(', message.channel, white_color)
+async def kill(message=''):
+    with open('pids.txt', 'w+') as file:
+        if not file.read() == '':
+            pids = file.read().split(' ')
+
+            for pid in pids:
+                subprocess.Popen(f'taskkill /f /im {pid}'.split(' '))
+
+            file.write('')
+
+    if not message == '':
+        await msender.send('Убил бота)(', message.channel, white_color)
 
 
 white_color = discord.Color.from_rgb(255,255,255)
