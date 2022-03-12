@@ -19,7 +19,7 @@ import subprocess
 # controls
 
 
-async def play(bot, link, message, play_top=False):
+async def play(bot, link, message, play_top=False, no_message=False):
     global vc, state, total_songs, q, link_queue
 
     if state == 2:
@@ -50,7 +50,8 @@ async def play(bot, link, message, play_top=False):
             link_queue.insert(pos + 1, link)
 
         total_songs += 1
-        await msender.send(f"{q.index(file) + 1}. {file[6:-4]}", message.channel)
+        if not no_message:
+            await msender.send(f"{q.index(file) + 1}. {file[6:-4]}", message.channel)
 
         return 0
 
@@ -133,23 +134,18 @@ async def play_playlist(name, message, bot):
     links = f'playlists/{name}.links'
 
     if os.path.isfile(links):
+        with open(txt, 'r', encoding="utf-8") as file:
+            await msender.send_long(file.read(), message.channel, f"Включаю плейлист {name}")
+
         with open(links, 'r', encoding="utf-8") as file:
             asd = file.read().split('\n')
-            for i in asd:
-                s = await play(bot, i, message)
-                if s == 1:
-                    return
-        await msender.send(f"Загрузка плейлиста '{name}' завершена", message.channel)
 
-    elif os.path.isfile(txt):
-        with open(txt, 'r', encoding="utf-8") as file:
-            asd = file.readlines()
             for i in asd:
-                s = await play(bot, i, message)
+                s = await play(bot, i, message, no_message=True)
                 if s == 1:
                     return
+
         await msender.send(f"Загрузка плейлиста '{name}' завершена", message.channel)
-        await msender.send(f"ОСТОРОЖНО! Плейлист сохранен в старом формате.", message.channel)
 
     else:
         await msender.send('Нет такого плейлиста', message.channel)
