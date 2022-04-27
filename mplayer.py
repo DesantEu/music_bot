@@ -2,7 +2,7 @@ from types import NoneType
 
 from discord import message
 import msender
-from youtubesearchpython import VideosSearch, Video, ResultMode
+from youtubesearchpython import VideosSearch, Video, ResultMode, Playlist
 import yt_dlp as youtube_dl
 import os
 import discord
@@ -33,7 +33,11 @@ async def play(bot, link, message, play_top=False, no_message=False):
         file = ''
 
         if link.startswith("https://"):
-            file = await get_title(link)
+            if 'list=' in link:
+                await play_yt_playlist(bot, link, message)
+                return 0
+            else:
+                file = await get_title(link)
 
         else:
             link = await youtube_search(link)
@@ -52,6 +56,9 @@ async def play(bot, link, message, play_top=False, no_message=False):
         total_songs += 1
         if not no_message:
             await msender.send(f"{q.index(file) + 1}. {file[6:-4]}", message.channel)
+
+
+        await queue_code() # because yt_dlp freezes shit
 
         return 0
 
@@ -130,6 +137,7 @@ async def save_playlist(name, message):
 
 
 async def play_playlist(name, message, bot):
+
     txt = f'playlists/{name}.txt'
     links = f'playlists/{name}.links'
 
@@ -149,6 +157,46 @@ async def play_playlist(name, message, bot):
 
     else:
         await msender.send('Нет такого плейлиста', message.channel)
+
+
+async def play_yt_playlist(bot, link, message):
+    playlist = None
+    print('playlist detected')
+
+    if not 'playlist?' in link:
+        print('shitty link detected')
+        ind = link.index('list=')
+        link = link[ind+5:]
+
+        if '&index=' in link:
+            ind = link.index('&index=')
+            link = link[:ind]
+
+        link = f'https://www.youtube.com/playlist?list={link}'
+
+    try:
+        playlist = Playlist(link)
+    except:
+        await msender.send('Плейлист не найден', message.channel)
+        return
+
+    while True:
+        for igor in playlist.videos:
+            if '&list=' in igor['link']:
+                ind = igor['link'].index('&list=')
+                igor['link'] = igor['link'][:ind]
+
+            await play(bot, igor['link'], message, no_message=True)
+            print('adding song')
+
+        if not playlist.hasMoreVideos:
+            print('ed songs')
+            break
+
+        playlist.getNextVideos()
+        print('getting more')
+
+    await msender.send('Загрузка плейлиста завершена', message.channel)
 
 
 async def del_playlist(name, message):
@@ -199,20 +247,24 @@ async def remove(song_id, message):
 
 
 async def queue():
-    global q, pos, current, state
     while True:
-        if not q == [] and not state == 2:
-            if not vc.is_playing() and state == 1:
-                if len(q) == 1:
-                    await play_file(vc, q[current])
-                else:
-                    await skip()
+        await queue_code()
 
-            if not current == pos:
-                current = pos
-
+async def queue_code():
+    global q, pos, current, state
+    
+    if not q == [] and not state == 2:
+        if not vc.is_playing() and state == 1:
+            if len(q) == 1:
                 await play_file(vc, q[current])
-        await asyncio.sleep(1)
+            else:
+                await skip()
+
+        if not current == pos:
+            current = pos
+
+            await play_file(vc, q[current])
+    await asyncio.sleep(1)
 
 
 async def print_queue(message):
@@ -380,6 +432,6 @@ async def youtube_search(prompt: str):
 async def get_title(link):
     vid = Video.get(link, mode=ResultMode.json)
     title = vid['title']
-    title = 'queue/' + re.sub(r'[\|/,:&$"]', '', title) + '.mp3'
+    title = 'queue/' + re.sub(r'[\|/,:&$#"]', '', title) + '.mp3'
 
     return title
