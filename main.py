@@ -1,5 +1,6 @@
 import discord
 import mparser
+import uparser
 import mplayer
 import asyncio
 import msender
@@ -61,6 +62,7 @@ class User(discord.Client):
             if not self.debug:
                 try:
                     await mparser.parse(self, message)
+                    await uparser.parse(self, message)
                 except Exception as e:
                     await msender.send('Что-то пошло не так...', message.channel, discord.Color.red())
                     print(e)
