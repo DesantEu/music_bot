@@ -5,7 +5,7 @@ import msender
 
 
 async def parse(bot, message):
-    msg = message.content[2:]
+    msg = message.content[len(bot.prefix):]
     chan = message.channel
 
     args = msg.split(" ", 1)

@@ -24,7 +24,7 @@ class User(discord.Client):
         self.admin_role = 'thwew-admin'
 
         # prefixes
-        self.prefix = "//"
+        self.prefix = ".."
         self.admin_prefix = ">"
 
 
