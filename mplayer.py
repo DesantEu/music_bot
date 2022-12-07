@@ -87,7 +87,17 @@ async def pause(message):
         await msender.send("Включаем", message.channel)
 
 
-async def stop(bot, message):
+async def stop(bot=None, message=None):
+    if message == None:
+        try:
+            vc
+        except NameError:
+            return
+        else:
+            await vc.disconnect()
+            await init()
+            return
+
     for i in bot.voice_clients:
         if i.guild == message.guild:
             await i.disconnect()
@@ -249,10 +259,13 @@ async def remove(song_id, message):
 async def queue():
     while True:
         await queue_code()
+        await check_disconnect()
 
 async def queue_code():
     global q, pos, current, state
     
+    if not q==[]:
+        print(vc.channel.voice_states)
     if not q == [] and not state == 2:
         if not vc.is_playing() and state == 1:
             if len(q) == 1:
@@ -265,6 +278,26 @@ async def queue_code():
 
             await play_file(vc, q[current])
     await asyncio.sleep(1)
+
+async def check_disconnect():
+    if state == 0:
+        return
+
+    try:
+        vc
+    except NameError:
+        await stop()
+    else:
+
+        # check if bot was disconnected by hand
+        if not vc.is_connected():
+           await stop()
+           print('someone disconnected me :(')
+
+        # check if only the bot is connected
+        if len(vc.channel.voice_states) < 2:
+            print('im the only one in the channel :( imma leave')
+            await stop()
 
 
 async def print_queue(message):
