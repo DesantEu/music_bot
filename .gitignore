@@ -1,4 +1,5 @@
 queue/
 key.txt
 tweaker_key.txt
+pids.txt
 __pycache__/
