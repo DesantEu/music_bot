@@ -357,16 +357,16 @@ async def get_song_length(file):
     popen.wait()
 
     # get duration for linux
-    for i in str(popen.stdout.read()).split("\r\n"):
-        print(f"'{i}'")
-        if i.startswith("duration="):
-            print('duracell')
-            print(i[9:])
-            song_len = int(float(i[9:]))
+    # for i in str(popen.stdout.read()).split("\r\n"):
+    #     print(f"'{i}'")
+    #     if i.startswith("duration="):
+    #         print('duracell')
+    #         print(i[9:])
+    #         song_len = int(float(i[9:]))
 
     # windows method
-    # song_len = str(popen.stdout.read())[23:-18]
-    # song_len = int(float(song_len))
+    song_len = str(popen.stdout.read())[21:-18]
+    song_len = int(float(song_len))
 
     print('SONG LEN:' + str(song_len))
 
