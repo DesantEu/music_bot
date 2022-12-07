@@ -264,8 +264,6 @@ async def queue():
 async def queue_code():
     global q, pos, current, state
     
-    if not q==[]:
-        print(vc.channel.voice_states)
     if not q == [] and not state == 2:
         if not vc.is_playing() and state == 1:
             if len(q) == 1:
