@@ -429,6 +429,12 @@ async def get_time_str():
 
 
 async def join(bot, message):
+    # if author is not in vc return
+    if type(message.author.voice) == NoneType:
+        await msender.send('Вы не в голосовом канале', message.channel)
+        return ''
+    
+    # this has to be reworked at some point
     for i in bot.voice_clients:
         if i.guild == message.guild:
             if bot.user in message.author.voice.channel.members:
@@ -436,13 +442,10 @@ async def join(bot, message):
             else:
                 await i.move_to(message.author.voice.channel)
                 return i
-    if type(message.author.voice) == NoneType:
-        await msender.send('Вы не в голосовом канале', message.channel)
-        return ''
-    else:
-        vc = await message.author.voice.channel.connect()
-        print('joined')
-        return vc
+
+    vc = await message.author.voice.channel.connect()
+    print('joined')
+    return vc
 
 
 async def download(video_url, filename):
