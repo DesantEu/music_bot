@@ -311,6 +311,19 @@ async def print_queue(message):
             [f'{i+1}. ' + q[i][6:-4] for i in range(len(q))]))
         await message.channel.send(embed=emb)
 
+async def now_playing(message):
+    if q == []:
+        await msender.send("А ниче не играет", message.channel)
+    else:
+        song_name = f'{pos + 1}. {q[pos][6:-4]}'
+
+        emb = discord.Embed(
+            title=f'Сейчас играет: \n {song_name} ({await get_time_str()})')
+        emb.color = discord.Color.from_rgb(255, 166, 201)
+
+        await message.channel.send(embed=emb)
+
+
 
 async def skip(num='', message=''):
     global pos, total_songs

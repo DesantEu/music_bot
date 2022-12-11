@@ -38,6 +38,8 @@ async def parse(bot, message):
 
     elif args[0] in ['q', 'queue']:
         await mplayer.print_queue(message)
+    elif args[0] in ['np', 'now']:
+        await mplayer.now_playing(message)
 
     elif args[0] in ['rm', 'remove']:
         await mplayer.remove(args[1], message)
