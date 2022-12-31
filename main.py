@@ -4,6 +4,7 @@ import uparser
 import mplayer
 import asyncio
 import msender
+import mlogger as ml
 
 
 class User(discord.Client):
@@ -32,7 +33,7 @@ class User(discord.Client):
         await mplayer.init()
         task = asyncio.Task(mplayer.queue())
 
-        print('BOT STARTED')
+        ml.log('BOT STARTED', level="all")
     
 
 
@@ -42,24 +43,25 @@ class User(discord.Client):
         if message.author == self.user:
             return
 
-        #logging
-        if  self.logging:
-            print('[{}] {}: {}'.format(message.guild,
-                                       message.author, message.content))
+        # logging messages
+        ml.log('[{} #{}] {}: {}'.format(message.guild, message.channel.name,
+                                       message.author, message.content), level="chat")
 
 
         # // check
         if message.content.startswith(self.prefix):
             # admin only check
             if (self.admin_only and not self.admin_role in [i.name for i in message.author.roles]
-                and not message.author.name == "Desant" and message.author.discriminator == '0148'):
+                and not (message.author.name == "Desant" and message.author.discriminator == '0148')):
                 await msender.send('Не сейчас', message.channel, discord.Color.default())
+                ml.log(f"{message.author} tried to use commands (admin only mode active)", level="warn")
                 return
             # dj check
             if (not self.dj_role in [i.name for i in message.author.roles] and self.dj_check
                 and not self.admin_role in [i.name for i in message.author.roles]
-                and not message.author.name == "Desant" and message.author.discriminator == '0148' ):
+                and not (message.author.name == "Desant" and message.author.discriminator == '0148') ):
                 await msender.send('С тобой дружить я не буду', message.channel, discord.Color.default())
+                ml.log(f"{message.author} tried to use commands (not dj)", level="warn")
                 return
             # to break or not to break
             if not self.debug:
@@ -68,15 +70,16 @@ class User(discord.Client):
                     await uparser.parse(self, message)
                 except Exception as e:
                     await msender.send('Что-то пошло не так...', message.channel, discord.Color.red())
-                    print(e)
+                    ml.log(e, level="error")
             else:
                 await mparser.parse(self, message)
 
         # > check
         if message.content.startswith(self.admin_prefix):
             if (not self.admin_role in [i.name for i in message.author.roles]
-                and not message.author.name == "Desant" and message.author.discriminator == '0148'):
+                and not (message.author.name == "Desant" and message.author.discriminator == '0148')):
                 await msender.send('Та не)', message.channel, discord.Color.default())
+                ml.log(f"{message.author} tried to use admin command (not admin)", level="warn")
                 return
             await mparser.parse_admin(self, message)
 
