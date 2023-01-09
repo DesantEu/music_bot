@@ -2,6 +2,7 @@ from types import NoneType
 
 from discord import message
 import msender
+import mlogger as ml
 from youtubesearchpython import VideosSearch, Video, ResultMode, Playlist
 import yt_dlp as youtube_dl
 import os
@@ -13,7 +14,7 @@ from mutagen.mp3 import MP3
 import subprocess
 
 # TODO repeat tpggle
-# TODO add now playing
+# TODO split this shit mess into multiple files at some point
 
 
 # controls
@@ -171,10 +172,10 @@ async def play_playlist(name, message, bot):
 
 async def play_yt_playlist(bot, link, message):
     playlist = None
-    print('playlist detected')
+    ml.log('playlist detected')
 
     if not 'playlist?' in link:
-        print('shitty link detected')
+        ml.log('shitty link detected')
         ind = link.index('list=')
         link = link[ind+5:]
 
@@ -197,14 +198,14 @@ async def play_yt_playlist(bot, link, message):
                 igor['link'] = igor['link'][:ind]
 
             await play(bot, igor['link'], message, no_message=True)
-            print('adding song')
+            ml.log('adding song')
 
         if not playlist.hasMoreVideos:
-            print('ed songs')
+            ml.log('end of songs')
             break
 
         playlist.getNextVideos()
-        print('getting more')
+        ml.log('getting more')
 
     await msender.send('Загрузка плейлиста завершена', message.channel)
 
@@ -290,11 +291,11 @@ async def check_disconnect():
         # check if bot was disconnected by hand
         if not vc.is_connected():
            await stop()
-           print('someone disconnected me :(')
+           ml.log('someone disconnected me :(')
 
         # check if only the bot is connected
         if len(vc.channel.voice_states) < 2:
-            print('im the only one in the channel :( imma leave')
+            ml.log('im the only one in the channel :( imma leave')
             await stop()
 
 
@@ -357,7 +358,7 @@ async def clear_queue(message):
         if vc.is_playing():
             vc.stop()
     except Exception as e:
-        print(e)
+        ml.log(e, level="error")
     finally:
         await msender.send('Очистил очередь', message.channel)
 
@@ -392,7 +393,7 @@ async def play_file(vc, file):
     song_start_time = datetime.now()
 
     state = 1
-    print(f'started playing "{file[6:-4]}"')
+    ml.log(f'started playing "{file[6:-4]}"')
 
 
 async def get_song_length(file):
@@ -404,7 +405,7 @@ async def get_song_length(file):
     song_len = str(popen.stdout.read())[21:-18]
     song_len = int(float(song_len))
 
-    print('SONG LEN:' + str(song_len))
+    ml.log('SONG LEN:' + str(song_len))
 
     return song_len
 
@@ -442,6 +443,7 @@ async def get_time_str():
 async def join(bot, message):
     # if author is not in vc return
     if type(message.author.voice) == NoneType:
+        ml.log(f"{message.author} tried to use bot (not in vc)", level="warn")
         await msender.send('Вы не в голосовом канале', message.channel)
         return ''
     
@@ -455,7 +457,7 @@ async def join(bot, message):
                 return i
 
     vc = await message.author.voice.channel.connect()
-    print('joined')
+    ml.log('joined')
     return vc
 
 
