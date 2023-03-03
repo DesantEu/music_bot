@@ -15,6 +15,8 @@ import subprocess
 # TODO repeat tpggle
 # TODO add now playing
 
+past_q = []
+
 
 # controls
 
@@ -137,6 +139,10 @@ async def list_playlist(name, message, bot):
 
 
 async def save_playlist(name, message):
+    if name == "":
+        await msender.send("А название?!??!?!", message.channel)
+        return
+
     with open(f'playlists/{name}.txt', 'w', encoding="utf-8") as file:
         file.write("\n".join([i[6:-4] for i in q]))
 
@@ -147,6 +153,9 @@ async def save_playlist(name, message):
 
 
 async def play_playlist(name, message, bot):
+    if name == "":
+        await msender.send("А название?!??!?!", message.channel)
+        return
 
     txt = f'playlists/{name}.txt'
     links = f'playlists/{name}.links'
@@ -311,6 +320,21 @@ async def print_queue(message):
             [f'{i+1}. ' + q[i][6:-4] for i in range(len(q))]))
         await message.channel.send(embed=emb)
 
+
+async def print_past_queue(message):
+    if past_q == []:
+        await msender.send("Очередь пустая а шо", message.channel)
+        emb.color = discord.Color.from_rgb(255, 166, 201)
+    else:
+        emb = discord.Embed(
+                title=f'Вот что играло пораньше:')
+        for i in past_q:
+            emb.add_field(name='-----', value="\n".join(
+                [f'{k+1}. ' + i[k][6:-4] for k in range(len(i))]))
+        await message.channel.send(embed=emb)
+
+
+
 async def now_playing(message):
     if q == []:
         await msender.send("А ниче не играет", message.channel)
@@ -366,7 +390,18 @@ async def clear_queue(message):
 
 
 async def init():
-    global pos, q, current, total_songs, state, volume, link_queue, song_start_time, pause_time, song_len
+    global pos, q, past_q, current, total_songs, state, volume, link_queue, song_start_time, pause_time, song_len
+    try:
+        if q:
+            pass
+    except:
+        q = []
+
+    if len(q) > 0:
+        past_q.append(q)
+    if len(past_q) > 3:
+        past_q.pop(0)
+    
     q = []
     link_queue = []
     song_start_time = datetime.now()
@@ -465,6 +500,7 @@ async def download(video_url, filename):
         'format': 'bestaudio/best',
         'keepvideo': False,
         'outtmpl': filename,
+        'ratelimit': 1000000,
     }
 
     with youtube_dl.YoutubeDL(options) as ydl:

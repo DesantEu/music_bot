@@ -5,6 +5,7 @@ import mplayer
 import asyncio
 import msender
 import mlogger as ml
+import traceback as tb
 
 
 class User(discord.Client):
@@ -70,7 +71,7 @@ class User(discord.Client):
                     await uparser.parse(self, message)
                 except Exception as e:
                     await msender.send('Что-то пошло не так...', message.channel, discord.Color.red())
-                    ml.log(e, level="error")
+                    ml.log(''.join(tb.format_exception(None, e, e.__traceback__)), level="error")
             else:
                 await mparser.parse(self, message)
 
