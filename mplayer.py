@@ -1,6 +1,5 @@
 from types import NoneType
 
-from discord import message
 import msender
 from youtubesearchpython import VideosSearch, Video, ResultMode, Playlist
 import yt_dlp as youtube_dl
@@ -9,13 +8,14 @@ import discord
 import asyncio
 import re
 from datetime import datetime
-from mutagen.mp3 import MP3
 import subprocess
 
 # TODO repeat tpggle
 # TODO add now playing
 
 past_q = []
+
+instances = []
 
 
 # controls
@@ -29,7 +29,7 @@ async def play(bot, link, message, play_top=False, no_message=False):
     if not link == '':
 
         vc = await join(bot, message)
-        if vc == '':
+        if vc == None:
             return 1
 
         file = ''
@@ -324,7 +324,6 @@ async def print_queue(message):
 async def print_past_queue(message):
     if past_q == []:
         await msender.send("Очередь пустая а шо", message.channel)
-        emb.color = discord.Color.from_rgb(255, 166, 201)
     else:
         emb = discord.Embed(
                 title=f'Вот что играло пораньше:')
@@ -349,9 +348,9 @@ async def now_playing(message):
 
 
 
-async def skip(num='', message=''):
+async def skip(num=None, message=None):
     global pos, total_songs
-    if num == '':
+    if num == None:
         pos += 1
         if pos > total_songs - 1:
             pos = 0
@@ -474,11 +473,11 @@ async def get_time_str():
     return f'{ptime} / {stime}'
 
 
-async def join(bot, message):
+async def join(bot, message) -> discord.VoiceClient:
     # if author is not in vc return
     if type(message.author.voice) == NoneType:
         await msender.send('Вы не в голосовом канале', message.channel)
-        return ''
+        return None
     
     # this has to be reworked at some point
     for i in bot.voice_clients:
@@ -500,7 +499,7 @@ async def download(video_url, filename):
         'format': 'bestaudio/best',
         'keepvideo': False,
         'outtmpl': filename,
-        'ratelimit': 1000000,
+        'ratelimit': 100000000,
     }
 
     with youtube_dl.YoutubeDL(options) as ydl:
